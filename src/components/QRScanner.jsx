@@ -4,7 +4,7 @@ import { validateQRCode, fetchScanLogsForTrustee } from '../utils/api';
 import Loader from './Loader';
 
 const QRScanner = () => {
-    const scannerRef = useRef(null);
+    const html5QrCodeInstance = useRef(null);
     const [scanning, setScanning] = useState(false);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
@@ -14,68 +14,69 @@ const QRScanner = () => {
 
     const beepSound = new Audio('/beep.mp3');
 
-    // Clean up scanner on unmount
     useEffect(() => {
         return () => {
-            if (scannerRef.current) {
-                scannerRef.current.stop().then(() => {
-                    scannerRef.current.clear();
+            if (html5QrCodeInstance.current) {
+                html5QrCodeInstance.current.stop().then(() => {
+                    html5QrCodeInstance.current.clear();
                 });
             }
         };
     }, []);
 
-    const initializeScanner = async () => {
-        setError(null);
-        setResult(null);
-        setScanLogs([]);
-        setScanning(true);
+    const startScanner = async () => {
+        try {
+            setError(null);
+            setResult(null);
+            setScanLogs([]);
+            setScanning(true);
 
-        const scanner = new Html5Qrcode('qr-reader');
-        scannerRef.current = scanner;
+            const scanner = new Html5Qrcode('qr-reader');
+            html5QrCodeInstance.current = scanner;
 
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-        scanner.start(
-            { facingMode: 'environment' },
-            config,
-            async (decodedText) => {
-                try {
-                    setLoading(true);
+            await scanner.start(
+                { facingMode: 'environment' },
+                config,
+                async (decodedText) => {
+                    try {
+                        setLoading(true);
 
-                    await scanner.stop();
-                    scanner.clear();
-                    setScanning(false);
+                        await scanner.stop();
+                        scanner.clear();
+                        setScanning(false);
 
-                    const validation = await validateQRCode(decodedText);
+                        const validation = await validateQRCode(decodedText);
 
-                    if (validation.success) {
-                        beepSound.play();
-                        triggerFlash();
+                        if (validation.success) {
+                            beepSound.play();
+                            triggerFlash();
 
-                        const logs = await fetchScanLogsForTrustee(validation.trustee.id);
-                        setScanLogs(logs);
+                            const logs = await fetchScanLogsForTrustee(validation.trustee.id);
+                            setScanLogs(logs);
+                        }
+
+                        if (!validation.success) {
+                            setError(validation.message);
+                        }
+
+                        setResult(validation);
+                    } catch (err) {
+                        console.error('Scan processing error:', err);
+                        setError('An unexpected error occurred during scanning.');
+                    } finally {
+                        setLoading(false);
                     }
-
-                    if (!validation.success) {
-                        setError(validation.message);
-                    }
-
-                    setResult(validation);
-                } catch (err) {
-                    console.error('Scan processing error:', err);
-                    setError('An unexpected error occurred during scanning.');
-                } finally {
-                    setLoading(false);
+                },
+                (errorMessage) => {
+                    console.warn('QR Scan error:', errorMessage);
                 }
-            },
-            (errorMessage) => {
-                console.warn('QR Scan error:', errorMessage);
-            }
-        ).catch((err) => {
+            );
+        } catch (err) {
             console.error('Unable to start scanner:', err);
             setError('Unable to start the camera scanner.');
-        });
+        }
     };
 
     const triggerFlash = () => {
@@ -84,21 +85,17 @@ const QRScanner = () => {
     };
 
     const handleScanNext = () => {
-        initializeScanner(); // Start scanner again for next scan
+        startScanner();
     };
 
     return (
         <div className={`scanner-container ${flash ? 'flash' : ''}`}>
             {!scanning && !result && !error && (
-                <>
-                    <button onClick={initializeScanner}>Ready to Scan</button>
-                    {/* Pre-render the scanner container even if it's not active yet */}
-                    <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: 'auto', marginTop: '20px' }} />
-                </>
+                <button onClick={startScanner}>Ready to Scan</button>
             )}
 
             {scanning && !loading && (
-                <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: 'auto' }} />
+                <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: '350px' }} />
             )}
 
             {loading && <Loader />}
