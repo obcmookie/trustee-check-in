@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { validateQRCode, fetchScanLogsForTrustee } from '../utils/api';
 import Loader from './Loader';
 import { setScannerInstance } from '../utils/scannerManager';
-import { QRCode } from 'react-qrcode-logo'; // QR code renderer
+import { QRCodeCanvas } from 'qrcode.react'; // ✅ Correct QR code renderer
 
 const QRScanner = () => {
     const html5QrCodeInstance = useRef(null);
@@ -133,7 +133,7 @@ const QRScanner = () => {
                     <h2 style={{ color: 'red', fontSize: '2rem' }}>❌ Scan Failed</h2>
 
                     <div className="qr-display">
-                        <QRCode value={scannedCode} size={200} />
+                        <QRCodeCanvas value={scannedCode} size={200} />
                     </div>
 
                     <div style={{ marginTop: '20px' }}>
