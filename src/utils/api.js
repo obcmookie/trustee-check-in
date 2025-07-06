@@ -27,7 +27,7 @@ export async function validateQRCode(qrCodeValue) {
             .eq('id', trustee.id);
 
         if (updateError) {
-            return { success: false, message: 'Error resetting daily count.' };
+            return { success: false, message: 'Error resetting daily count.', trustee };
         }
 
         // Refresh trustee data
@@ -36,7 +36,8 @@ export async function validateQRCode(qrCodeValue) {
     }
 
     if (trustee.daily_scan_count >= trustee.family_size_limit) {
-        return { success: false, message: 'Daily scan limit reached.' };
+        // ✅ Return trustee on failure so we can display scan log
+        return { success: false, message: 'Daily scan limit reached.', trustee };
     }
 
     // Step 3: Log the scan
@@ -45,7 +46,7 @@ export async function validateQRCode(qrCodeValue) {
     ]);
 
     if (logError) {
-        return { success: false, message: 'Error logging the scan.' };
+        return { success: false, message: 'Error logging the scan.', trustee };
     }
 
     // Step 4: Increment the scan count
@@ -55,7 +56,7 @@ export async function validateQRCode(qrCodeValue) {
         .eq('id', trustee.id);
 
     if (countError) {
-        return { success: false, message: 'Error updating scan count.' };
+        return { success: false, message: 'Error updating scan count.', trustee };
     }
 
     return { success: true, trustee };

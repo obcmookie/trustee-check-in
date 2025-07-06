@@ -208,3 +208,12 @@ input {
         transform: translate(-50%, -50%) rotate(45deg) scale(1);
     }
 }
+
+.flash-red {
+    animation: redFlash 0.5s;
+}
+
+@keyframes redFlash {
+    0% { background-color: rgba(255, 0, 0, 0.5); }
+    100% { background-color: transparent; }
+}

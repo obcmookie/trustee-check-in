@@ -3,6 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { validateQRCode, fetchScanLogsForTrustee } from '../utils/api';
 import Loader from './Loader';
 import { setScannerInstance } from '../utils/scannerManager';
+import { QRCode } from 'react-qrcode-logo'; // QR code renderer
 
 const QRScanner = () => {
     const html5QrCodeInstance = useRef(null);
@@ -11,8 +12,9 @@ const QRScanner = () => {
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
     const [flash, setFlash] = useState(false);
+    const [flashRed, setFlashRed] = useState(false);
     const [scanLogs, setScanLogs] = useState([]);
-    const [scannedCode, setScannedCode] = useState(''); // Store scanned QR code
+    const [scannedCode, setScannedCode] = useState('');
 
     const beepSound = new Audio('/beep.mp3');
 
@@ -25,7 +27,7 @@ const QRScanner = () => {
             setScannerActive(true);
 
             html5QrCodeInstance.current = new Html5Qrcode('qr-reader');
-            setScannerInstance(html5QrCodeInstance.current); // Save globally
+            setScannerInstance(html5QrCodeInstance.current);
 
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
@@ -50,9 +52,14 @@ const QRScanner = () => {
                             const logs = await fetchScanLogsForTrustee(validation.trustee.id);
                             setScanLogs(logs);
                         } else {
-                            // Fetch logs even on failure
-                            const logs = await fetchScanLogsForTrustee(validation.trustee.id);
-                            setScanLogs(logs);
+                            triggerRedFlash();
+
+                            // Fetch logs even on failure if trustee ID is available
+                            if (validation.trustee && validation.trustee.id) {
+                                const logs = await fetchScanLogsForTrustee(validation.trustee.id);
+                                setScanLogs(logs);
+                            }
+
                             setError(validation.message);
                         }
 
@@ -79,13 +86,17 @@ const QRScanner = () => {
         setTimeout(() => setFlash(false), 300);
     };
 
+    const triggerRedFlash = () => {
+        setFlashRed(true);
+        setTimeout(() => setFlashRed(false), 500);
+    };
+
     const handleScanNext = () => {
-        startScanner(); // Restart scanner for next scan
+        startScanner();
     };
 
     return (
-        <div className={`scanner-container ${flash ? 'flash' : ''}`}>
-            {/* Scanner container MUST always be rendered */}
+        <div className={`scanner-container ${flash ? 'flash' : ''} ${flashRed ? 'flash-red' : ''}`}>
             <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: '350px', marginBottom: '20px' }} />
 
             {!scannerActive && !result && !error && (
@@ -120,13 +131,9 @@ const QRScanner = () => {
             {error && (
                 <div className="error-message">
                     <h2 style={{ color: 'red', fontSize: '2rem' }}>❌ Scan Failed</h2>
-                    <p style={{ fontWeight: 'bold' }}>Scanned QR Code: {scannedCode}</p>
 
                     <div className="qr-display">
-                        <div className="qr-box">
-                            <p style={{ fontSize: '1.5rem' }}>{scannedCode}</p>
-                            <div className="red-x"></div>
-                        </div>
+                        <QRCode value={scannedCode} size={200} />
                     </div>
 
                     <div style={{ marginTop: '20px' }}>
