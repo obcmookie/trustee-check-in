@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { validateQRCode } from '../utils/api';
+import { validateQRCode, fetchScanLogsForTrustee } from '../utils/api';
 import Loader from './Loader';
 
 const QRScanner = () => {
@@ -10,23 +10,13 @@ const QRScanner = () => {
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
     const [flash, setFlash] = useState(false);
+    const [scanLogs, setScanLogs] = useState([]);
 
     const beepSound = new Audio('/beep.mp3');
 
-    useEffect(() => {
-        startScanner();
-
-        return () => {
-            if (scannerRef.current) {
-                scannerRef.current.stop().then(() => {
-                    scannerRef.current.clear();
-                });
-            }
-        };
-    }, []);
-
     const startScanner = () => {
         setError(null);
+        setResult(null);
         const scanner = new Html5Qrcode('qr-reader');
         scannerRef.current = scanner;
         setScanning(true);
@@ -50,6 +40,10 @@ const QRScanner = () => {
                     if (validation.success) {
                         beepSound.play();
                         triggerFlash();
+
+                        // Fetch mini log for this trustee
+                        const logs = await fetchScanLogsForTrustee(validation.trustee.id);
+                        setScanLogs(logs);
                     }
 
                     if (!validation.success) {
@@ -82,12 +76,17 @@ const QRScanner = () => {
     const handleScanNext = () => {
         setResult(null);
         setError(null);
+        setScanLogs([]);
         startScanner();
     };
 
     return (
         <div className={`scanner-container ${flash ? 'flash' : ''}`}>
-            {!loading && !error && (
+            {!scanning && !result && !error && (
+                <button onClick={startScanner}>Ready to Scan</button>
+            )}
+
+            {scanning && !loading && (
                 <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: 'auto' }} />
             )}
 
@@ -99,6 +98,20 @@ const QRScanner = () => {
                     <p>{result.trustee.first_name} {result.trustee.last_name}</p>
                     <p>Gaam: {result.trustee.gaam}</p>
                     <p>Scans Today: {result.trustee.daily_scan_count + 1} / {result.trustee.family_size_limit}</p>
+
+                    {/* Mini Log */}
+                    <div style={{ marginTop: '20px' }}>
+                        <h3>Scan Log for this Trustee</h3>
+                        {scanLogs.length === 0 && <p>No previous scans today.</p>}
+                        {scanLogs.length > 0 && (
+                            <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
+                                {scanLogs.map((log) => (
+                                    <li key={log.id}>{new Date(log.scan_time).toLocaleString()}</li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
                     <button onClick={handleScanNext} style={{ marginTop: '15px' }}>Scan Next QR</button>
                 </div>
             )}
