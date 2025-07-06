@@ -1,8 +1,6 @@
-// src/components/QRScanner.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { validateQRCode } from '../utils/api';
-import CheckInResult from './CheckInResult';
 import Loader from './Loader';
 
 const QRScanner = () => {
@@ -16,9 +14,7 @@ const QRScanner = () => {
     const beepSound = new Audio('/beep.mp3');
 
     useEffect(() => {
-        if (!scannerRef.current && !scanning) {
-            startScanner();
-        }
+        startScanner();
 
         return () => {
             if (scannerRef.current) {
@@ -43,8 +39,9 @@ const QRScanner = () => {
             async (decodedText) => {
                 try {
                     setLoading(true);
-                    await scanner.stop();
-                    setScanning(false);
+
+                    // Stop scanner temporarily
+                    await scanner.pause();
 
                     const validation = await validateQRCode(decodedText);
 
@@ -58,6 +55,14 @@ const QRScanner = () => {
                     }
 
                     setResult(validation);
+
+                    // Restart scanner automatically after 3 seconds
+                    setTimeout(() => {
+                        setResult(null);
+                        setError(null);
+                        scanner.resume();
+                    }, 3000);
+
                 } catch (err) {
                     console.error('Scan processing error:', err);
                     setError('An unexpected error occurred during scanning.');
@@ -74,32 +79,34 @@ const QRScanner = () => {
         });
     };
 
-    const resetScanner = () => {
-        setResult(null);
-        setError(null);
-        startScanner();
-    };
-
     const triggerFlash = () => {
         setFlash(true);
-        setTimeout(() => setFlash(false), 300); // Flash duration
+        setTimeout(() => setFlash(false), 300);
     };
 
     return (
         <div className={`scanner-container ${flash ? 'flash' : ''}`}>
-            {!loading && !result && !error && (
+            {!loading && !error && (
                 <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: 'auto' }} />
             )}
 
             {loading && <Loader />}
 
-            {result && <CheckInResult result={result} onRetry={resetScanner} />}
+            {result && result.success && (
+                <div className="checkin-result">
+                    <h2>✅ Check-In Successful</h2>
+                    <p>{result.trustee.first_name} {result.trustee.last_name}</p>
+                    <p>Gaam: {result.trustee.gaam}</p>
+                    <p>Scans Today: {result.trustee.daily_scan_count + 1} / {result.trustee.family_size_limit}</p>
+                    <p>Ready for next scan...</p>
+                </div>
+            )}
 
             {error && (
                 <div className="error-message">
                     <h2>❌ Error</h2>
                     <p>{error}</p>
-                    <button onClick={resetScanner}>Try Again</button>
+                    <button onClick={() => window.location.reload()}>Restart Scanner</button>
                 </div>
             )}
         </div>
