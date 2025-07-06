@@ -58,3 +58,22 @@ export async function validateQRCode(qrCodeValue) {
 
     return { success: true, trustee };
 }
+
+/**
+ * Fetch recent scan logs for a specific trustee (Mini Log).
+ */
+export async function fetchScanLogsForTrustee(trusteeId) {
+    const { data, error } = await supabase
+        .from('scan_logs')
+        .select('id, scan_time')
+        .eq('trustee_id', trusteeId)
+        .order('scan_time', { ascending: false })
+        .limit(5); // Show last 5 scans
+
+    if (error) {
+        console.error('Error fetching mini log:', error);
+        return [];
+    }
+
+    return data;
+}
