@@ -1,40 +1,50 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { validateQRCode, fetchScanLogsForTrustee } from '../utils/api';
 import Loader from './Loader';
 
 const QRScanner = () => {
-    const html5QrCodeInstance = useRef(null);
+    const scannerRef = useRef(null);
     const [scanning, setScanning] = useState(false);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
     const [flash, setFlash] = useState(false);
     const [scanLogs, setScanLogs] = useState([]);
-    const [scannerKey, setScannerKey] = useState(Date.now()); // Dynamic scanner container key
 
     const beepSound = new Audio('/beep.mp3');
 
-    const startScanner = () => {
+    // Clean up scanner on unmount
+    useEffect(() => {
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.stop().then(() => {
+                    scannerRef.current.clear();
+                });
+            }
+        };
+    }, []);
+
+    const initializeScanner = async () => {
         setError(null);
         setResult(null);
         setScanLogs([]);
         setScanning(true);
 
-        const scannerId = `qr-reader-${scannerKey}`; // Unique container ID
-        html5QrCodeInstance.current = new Html5Qrcode(scannerId);
+        const scanner = new Html5Qrcode('qr-reader');
+        scannerRef.current = scanner;
 
         const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-        html5QrCodeInstance.current.start(
+        scanner.start(
             { facingMode: 'environment' },
             config,
             async (decodedText) => {
                 try {
                     setLoading(true);
 
-                    await html5QrCodeInstance.current.stop();
-                    html5QrCodeInstance.current.clear();
+                    await scanner.stop();
+                    scanner.clear();
                     setScanning(false);
 
                     const validation = await validateQRCode(decodedText);
@@ -74,22 +84,21 @@ const QRScanner = () => {
     };
 
     const handleScanNext = () => {
-        // Create a new scanner key to force DOM refresh
-        setScannerKey(Date.now());
-        setResult(null);
-        setError(null);
-        setScanLogs([]);
-        startScanner();
+        initializeScanner(); // Start scanner again for next scan
     };
 
     return (
         <div className={`scanner-container ${flash ? 'flash' : ''}`}>
             {!scanning && !result && !error && (
-                <button onClick={startScanner}>Ready to Scan</button>
+                <>
+                    <button onClick={initializeScanner}>Ready to Scan</button>
+                    {/* Pre-render the scanner container even if it's not active yet */}
+                    <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: 'auto', marginTop: '20px' }} />
+                </>
             )}
 
             {scanning && !loading && (
-                <div id={`qr-reader-${scannerKey}`} style={{ width: '100%', maxWidth: '350px', height: 'auto' }} />
+                <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: 'auto' }} />
             )}
 
             {loading && <Loader />}
