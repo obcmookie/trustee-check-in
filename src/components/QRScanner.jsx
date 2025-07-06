@@ -58,13 +58,6 @@ const QRScanner = () => {
 
                     setResult(validation);
 
-                    // Restart scanner after 3 seconds
-                    setTimeout(() => {
-                        setResult(null);
-                        setError(null);
-                        startScanner(); // Restart clean scanner
-                    }, 3000);
-
                 } catch (err) {
                     console.error('Scan processing error:', err);
                     setError('An unexpected error occurred during scanning.');
@@ -86,6 +79,12 @@ const QRScanner = () => {
         setTimeout(() => setFlash(false), 300);
     };
 
+    const handleScanNext = () => {
+        setResult(null);
+        setError(null);
+        startScanner();
+    };
+
     return (
         <div className={`scanner-container ${flash ? 'flash' : ''}`}>
             {!loading && !error && (
@@ -100,7 +99,7 @@ const QRScanner = () => {
                     <p>{result.trustee.first_name} {result.trustee.last_name}</p>
                     <p>Gaam: {result.trustee.gaam}</p>
                     <p>Scans Today: {result.trustee.daily_scan_count + 1} / {result.trustee.family_size_limit}</p>
-                    <p>Ready for next scan...</p>
+                    <button onClick={handleScanNext} style={{ marginTop: '15px' }}>Scan Next QR</button>
                 </div>
             )}
 
