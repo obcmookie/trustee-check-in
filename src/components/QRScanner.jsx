@@ -4,7 +4,6 @@ import { validateQRCode, fetchScanLogsForTrustee } from '../utils/api';
 import Loader from './Loader';
 
 const QRScanner = () => {
-    const scannerRef = useRef(null);
     const html5QrCodeInstance = useRef(null);
     const [scanning, setScanning] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -12,6 +11,7 @@ const QRScanner = () => {
     const [error, setError] = useState(null);
     const [flash, setFlash] = useState(false);
     const [scanLogs, setScanLogs] = useState([]);
+    const [scannerKey, setScannerKey] = useState(Date.now()); // Dynamic scanner container key
 
     const beepSound = new Audio('/beep.mp3');
 
@@ -21,7 +21,8 @@ const QRScanner = () => {
         setScanLogs([]);
         setScanning(true);
 
-        html5QrCodeInstance.current = new Html5Qrcode('qr-reader');
+        const scannerId = `qr-reader-${scannerKey}`; // Unique container ID
+        html5QrCodeInstance.current = new Html5Qrcode(scannerId);
 
         const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
@@ -32,8 +33,8 @@ const QRScanner = () => {
                 try {
                     setLoading(true);
 
-                    // Fully stop scanner after scan
                     await html5QrCodeInstance.current.stop();
+                    html5QrCodeInstance.current.clear();
                     setScanning(false);
 
                     const validation = await validateQRCode(decodedText);
@@ -42,7 +43,6 @@ const QRScanner = () => {
                         beepSound.play();
                         triggerFlash();
 
-                        // Fetch mini log for this trustee
                         const logs = await fetchScanLogsForTrustee(validation.trustee.id);
                         setScanLogs(logs);
                     }
@@ -52,7 +52,6 @@ const QRScanner = () => {
                     }
 
                     setResult(validation);
-
                 } catch (err) {
                     console.error('Scan processing error:', err);
                     setError('An unexpected error occurred during scanning.');
@@ -75,10 +74,12 @@ const QRScanner = () => {
     };
 
     const handleScanNext = () => {
+        // Create a new scanner key to force DOM refresh
+        setScannerKey(Date.now());
         setResult(null);
         setError(null);
         setScanLogs([]);
-        startScanner(); // Start fresh scanner
+        startScanner();
     };
 
     return (
@@ -88,7 +89,7 @@ const QRScanner = () => {
             )}
 
             {scanning && !loading && (
-                <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: 'auto' }} />
+                <div id={`qr-reader-${scannerKey}`} style={{ width: '100%', maxWidth: '350px', height: 'auto' }} />
             )}
 
             {loading && <Loader />}
