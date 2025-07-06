@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { validateQRCode, fetchScanLogsForTrustee } from '../utils/api';
 import Loader from './Loader';
 
 const QRScanner = () => {
     const scannerRef = useRef(null);
+    const html5QrCodeInstance = useRef(null);
     const [scanning, setScanning] = useState(false);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
@@ -17,22 +18,22 @@ const QRScanner = () => {
     const startScanner = () => {
         setError(null);
         setResult(null);
-        const scanner = new Html5Qrcode('qr-reader');
-        scannerRef.current = scanner;
+        setScanLogs([]);
         setScanning(true);
+
+        html5QrCodeInstance.current = new Html5Qrcode('qr-reader');
 
         const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-        scanner.start(
+        html5QrCodeInstance.current.start(
             { facingMode: 'environment' },
             config,
             async (decodedText) => {
                 try {
                     setLoading(true);
 
-                    // Fully stop scanner to clear buffer
-                    await scanner.stop();
-                    scanner.clear();
+                    // Fully stop scanner after scan
+                    await html5QrCodeInstance.current.stop();
                     setScanning(false);
 
                     const validation = await validateQRCode(decodedText);
@@ -77,7 +78,7 @@ const QRScanner = () => {
         setResult(null);
         setError(null);
         setScanLogs([]);
-        startScanner();
+        startScanner(); // Start fresh scanner
     };
 
     return (
@@ -99,7 +100,6 @@ const QRScanner = () => {
                     <p>Gaam: {result.trustee.gaam}</p>
                     <p>Scans Today: {result.trustee.daily_scan_count + 1} / {result.trustee.family_size_limit}</p>
 
-                    {/* Mini Log */}
                     <div style={{ marginTop: '20px' }}>
                         <h3>Scan Log for this Trustee</h3>
                         {scanLogs.length === 0 && <p>No previous scans today.</p>}
