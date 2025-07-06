@@ -17,11 +17,16 @@ export async function validateQRCode(qrCodeValue) {
     }
 
     // Step 2: Check and reset daily scan count if needed
-    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    const lastScanDate = trustee.last_scan_date ? trustee.last_scan_date.split('T')[0] : null;
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Ensure that both dates are using only the YYYY-MM-DD format
+    let lastScanDate = trustee.last_scan_date;
+    if (lastScanDate) {
+        lastScanDate = lastScanDate.split('T')[0]; // Remove time if it's there
+    }
 
     if (lastScanDate !== today) {
-        // Reset daily scan count for a new day
+        // Reset daily scan count for new day
         const { error: updateError } = await supabase
             .from('trustees')
             .update({ daily_scan_count: 0, last_scan_date: today })
@@ -31,7 +36,6 @@ export async function validateQRCode(qrCodeValue) {
             return { success: false, message: 'Error resetting daily count.' };
         }
 
-        // Also update the local object
         trustee.daily_scan_count = 0;
         trustee.last_scan_date = today;
     }
@@ -64,7 +68,7 @@ export async function validateQRCode(qrCodeValue) {
 }
 
 /**
- * Fetch all scan logs with trustee details (for Admin page).
+ * Fetch all scan logs with trustee details.
  */
 export async function fetchScanLogs() {
     const { data, error } = await supabase
@@ -98,7 +102,7 @@ export async function fetchScanLogsForTrustee(trusteeId) {
         .select('id, scan_time')
         .eq('trustee_id', trusteeId)
         .order('scan_time', { ascending: false })
-        .limit(5); // Show last 5 scans
+        .limit(5);
 
     if (error) {
         console.error('Error fetching mini log:', error);
