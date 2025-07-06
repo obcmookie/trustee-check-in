@@ -17,9 +17,10 @@ export async function validateQRCode(qrCodeValue) {
     }
 
     // Step 2: Check and reset daily scan count if needed
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const lastScanDate = trustee.last_scan_date ? trustee.last_scan_date.split('T')[0] : null;
 
-    if (trustee.last_scan_date !== today) {
+    if (lastScanDate !== today) {
         // Reset daily scan count for a new day
         const { error: updateError } = await supabase
             .from('trustees')
@@ -30,6 +31,7 @@ export async function validateQRCode(qrCodeValue) {
             return { success: false, message: 'Error resetting daily count.' };
         }
 
+        // Also update the local object
         trustee.daily_scan_count = 0;
         trustee.last_scan_date = today;
     }
