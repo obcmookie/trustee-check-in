@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "^2.50.3",
     "axios": "^1.10.0",
     "html5-qrcode": "^2.3.8",
+    "prop-types": "^15.8.1",
     "react": "^19.1.0",
     "react-csv": "^2.2.2",
     "react-dom": "^19.1.0",
