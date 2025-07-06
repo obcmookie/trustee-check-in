@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { validateQRCode, fetchScanLogsForTrustee } from '../utils/api';
 import Loader from './Loader';
+import { useLocation } from 'react-router-dom';
 
 const QRScanner = () => {
     const html5QrCodeInstance = useRef(null);
@@ -14,16 +15,21 @@ const QRScanner = () => {
 
     const beepSound = new Audio('/beep.mp3');
 
+    const location = useLocation(); // To detect route changes
+
+    // Clean up the scanner when the component unmounts or when route changes
     useEffect(() => {
-        // Cleanup on unmount
         return () => {
             if (html5QrCodeInstance.current) {
                 html5QrCodeInstance.current.stop().then(() => {
                     html5QrCodeInstance.current.clear();
+                    console.log('Scanner stopped on route change.');
+                }).catch((err) => {
+                    console.error('Error stopping scanner on route change:', err);
                 });
             }
         };
-    }, []);
+    }, [location]); // This triggers cleanup on route change
 
     const startScanner = async () => {
         try {
