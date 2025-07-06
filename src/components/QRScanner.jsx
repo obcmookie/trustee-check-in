@@ -40,8 +40,10 @@ const QRScanner = () => {
                 try {
                     setLoading(true);
 
-                    // Stop scanner temporarily
-                    await scanner.pause();
+                    // Fully stop scanner to clear buffer
+                    await scanner.stop();
+                    scanner.clear();
+                    setScanning(false);
 
                     const validation = await validateQRCode(decodedText);
 
@@ -56,11 +58,11 @@ const QRScanner = () => {
 
                     setResult(validation);
 
-                    // Restart scanner automatically after 3 seconds
+                    // Restart scanner after 3 seconds
                     setTimeout(() => {
                         setResult(null);
                         setError(null);
-                        scanner.resume();
+                        startScanner(); // Restart clean scanner
                     }, 3000);
 
                 } catch (err) {
