@@ -1,10 +1,18 @@
 // src/App.jsx
-import React from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
+import { stopScannerInstance } from './utils/scannerManager';
 
 const App = () => {
+    const location = useLocation();
+
+    // Stop scanner globally on any route change
+    useEffect(() => {
+        stopScannerInstance();
+    }, [location]);
+
     return (
         <div className="app-container">
             <nav>
