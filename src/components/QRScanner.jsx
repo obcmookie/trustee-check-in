@@ -12,6 +12,7 @@ const QRScanner = () => {
     const [error, setError] = useState(null);
     const [flash, setFlash] = useState(false);
     const [scanLogs, setScanLogs] = useState([]);
+    const [scannedCode, setScannedCode] = useState(''); // Store scanned QR code
 
     const beepSound = new Audio('/beep.mp3');
 
@@ -20,6 +21,7 @@ const QRScanner = () => {
             setError(null);
             setResult(null);
             setScanLogs([]);
+            setScannedCode('');
             setScannerActive(true);
 
             html5QrCodeInstance.current = new Html5Qrcode('qr-reader');
@@ -39,6 +41,7 @@ const QRScanner = () => {
                         setScannerActive(false);
 
                         const validation = await validateQRCode(decodedText);
+                        setScannedCode(decodedText);
 
                         if (validation.success) {
                             beepSound.play();
@@ -46,9 +49,10 @@ const QRScanner = () => {
 
                             const logs = await fetchScanLogsForTrustee(validation.trustee.id);
                             setScanLogs(logs);
-                        }
-
-                        if (!validation.success) {
+                        } else {
+                            // Fetch logs even on failure
+                            const logs = await fetchScanLogsForTrustee(validation.trustee.id);
+                            setScanLogs(logs);
                             setError(validation.message);
                         }
 
@@ -115,9 +119,29 @@ const QRScanner = () => {
 
             {error && (
                 <div className="error-message">
-                    <h2>❌ Error</h2>
-                    <p>{error}</p>
-                    <button onClick={() => window.location.reload()}>Restart Scanner</button>
+                    <h2 style={{ color: 'red', fontSize: '2rem' }}>❌ Scan Failed</h2>
+                    <p style={{ fontWeight: 'bold' }}>Scanned QR Code: {scannedCode}</p>
+
+                    <div className="qr-display">
+                        <div className="qr-box">
+                            <p style={{ fontSize: '1.5rem' }}>{scannedCode}</p>
+                            <div className="red-x"></div>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '20px' }}>
+                        <h3>Scan Log for this Trustee</h3>
+                        {scanLogs.length === 0 && <p>No previous scans today.</p>}
+                        {scanLogs.length > 0 && (
+                            <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
+                                {scanLogs.map((log) => (
+                                    <li key={log.id}>{new Date(log.scan_time).toLocaleString()}</li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <button onClick={handleScanNext} style={{ marginTop: '15px' }}>Scan Next QR</button>
                 </div>
             )}
         </div>
