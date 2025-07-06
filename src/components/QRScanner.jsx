@@ -83,12 +83,12 @@ const QRScanner = () => {
 
     const triggerFlash = () => {
         setFlash(true);
-        setTimeout(() => setFlash(false), 300);
+        setTimeout(() => setFlash(false), 500);
     };
 
     const triggerRedFlash = () => {
         setFlashRed(true);
-        setTimeout(() => setFlashRed(false), 500);
+        setTimeout(() => setFlashRed(false), 1000);
     };
 
     const handleScanNext = () => {
