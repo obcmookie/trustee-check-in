@@ -81,6 +81,7 @@ input {
 .checkin-result {
     text-align: center;
     margin-top: 20px;
+    font-size: 20px;
 }
 
 .checkin-result h2 {
@@ -89,6 +90,7 @@ input {
 
 .checkin-result p {
     margin: 5px 0;
+    font-size: 22px;
 }
 
 .error-message {
