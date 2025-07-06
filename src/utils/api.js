@@ -1,9 +1,7 @@
 // src/utils/api.js
 import { supabase } from '../services/supabaseClient';
 
-/**
- * Validate the QR code, check family scan limits, log the scan, and update counts.
- */
+// Validate QR code and check family scan limit
 export async function validateQRCode(qrCodeValue) {
     // Step 1: Find the trustee by QR code
     const { data: trustee, error } = await supabase
@@ -16,17 +14,11 @@ export async function validateQRCode(qrCodeValue) {
         return { success: false, message: 'QR Code not found.' };
     }
 
-    // Step 2: Check and reset daily scan count if needed
+    // Step 2: Check if daily scan count is within the limit
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    // Ensure that both dates are using only the YYYY-MM-DD format
-    let lastScanDate = trustee.last_scan_date;
-    if (lastScanDate) {
-        lastScanDate = lastScanDate.split('T')[0]; // Remove time if it's there
-    }
-
-    if (lastScanDate !== today) {
-        // Reset daily scan count for new day
+    if (trustee.last_scan_date !== today) {
+        // If it's a new day, reset the daily scan count
         const { error: updateError } = await supabase
             .from('trustees')
             .update({ daily_scan_count: 0, last_scan_date: today })
@@ -36,16 +28,16 @@ export async function validateQRCode(qrCodeValue) {
             return { success: false, message: 'Error resetting daily count.' };
         }
 
+        // Refresh trustee data
         trustee.daily_scan_count = 0;
         trustee.last_scan_date = today;
     }
 
-    // Step 3: Check if family scan limit is reached
     if (trustee.daily_scan_count >= trustee.family_size_limit) {
         return { success: false, message: 'Daily scan limit reached.' };
     }
 
-    // Step 4: Log the scan
+    // Step 3: Log the scan
     const { error: logError } = await supabase.from('scan_logs').insert([
         { trustee_id: trustee.id }
     ]);
@@ -54,7 +46,7 @@ export async function validateQRCode(qrCodeValue) {
         return { success: false, message: 'Error logging the scan.' };
     }
 
-    // Step 5: Increment the daily scan count
+    // Step 4: Increment the scan count
     const { error: countError } = await supabase
         .from('trustees')
         .update({ daily_scan_count: trustee.daily_scan_count + 1 })
@@ -65,49 +57,4 @@ export async function validateQRCode(qrCodeValue) {
     }
 
     return { success: true, trustee };
-}
-
-/**
- * Fetch all scan logs with trustee details.
- */
-export async function fetchScanLogs() {
-    const { data, error } = await supabase
-        .from('scan_logs')
-        .select(`
-            id,
-            scan_time,
-            scanned_by,
-            trustee:trustee_id (
-                first_name,
-                last_name,
-                gaam
-            )
-        `)
-        .order('scan_time', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching logs:', error);
-        return [];
-    }
-
-    return data;
-}
-
-/**
- * Fetch recent scan logs for a specific trustee (Mini Log).
- */
-export async function fetchScanLogsForTrustee(trusteeId) {
-    const { data, error } = await supabase
-        .from('scan_logs')
-        .select('id, scan_time')
-        .eq('trustee_id', trusteeId)
-        .order('scan_time', { ascending: false })
-        .limit(5);
-
-    if (error) {
-        console.error('Error fetching mini log:', error);
-        return [];
-    }
-
-    return data;
 }
