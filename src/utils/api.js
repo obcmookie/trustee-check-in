@@ -1,7 +1,9 @@
 // src/utils/api.js
 import { supabase } from '../services/supabaseClient';
 
-// Validate QR code and check family scan limit
+/**
+ * Validate the QR code, check family scan limit, log the scan, and update counts.
+ */
 export async function validateQRCode(qrCodeValue) {
     // Step 1: Find the trustee by QR code
     const { data: trustee, error } = await supabase
@@ -60,7 +62,33 @@ export async function validateQRCode(qrCodeValue) {
 }
 
 /**
- * Fetch recent scan logs for a specific trustee (Mini Log).
+ * Fetch all scan logs with trustee details (for Admin page).
+ */
+export async function fetchScanLogs() {
+    const { data, error } = await supabase
+        .from('scan_logs')
+        .select(`
+            id,
+            scan_time,
+            scanned_by,
+            trustee:trustee_id (
+                first_name,
+                last_name,
+                gaam
+            )
+        `)
+        .order('scan_time', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching logs:', error);
+        return [];
+    }
+
+    return data;
+}
+
+/**
+ * Fetch recent scan logs for a specific trustee (Mini Log on QR scanner page).
  */
 export async function fetchScanLogsForTrustee(trusteeId) {
     const { data, error } = await supabase
