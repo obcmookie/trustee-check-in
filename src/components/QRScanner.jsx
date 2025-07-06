@@ -5,7 +5,7 @@ import Loader from './Loader';
 
 const QRScanner = () => {
     const html5QrCodeInstance = useRef(null);
-    const [scanning, setScanning] = useState(false);
+    const [scannerActive, setScannerActive] = useState(false);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
@@ -15,6 +15,7 @@ const QRScanner = () => {
     const beepSound = new Audio('/beep.mp3');
 
     useEffect(() => {
+        // Cleanup on unmount
         return () => {
             if (html5QrCodeInstance.current) {
                 html5QrCodeInstance.current.stop().then(() => {
@@ -29,23 +30,22 @@ const QRScanner = () => {
             setError(null);
             setResult(null);
             setScanLogs([]);
-            setScanning(true);
+            setScannerActive(true);
 
-            const scanner = new Html5Qrcode('qr-reader');
-            html5QrCodeInstance.current = scanner;
+            html5QrCodeInstance.current = new Html5Qrcode('qr-reader');
 
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-            await scanner.start(
+            await html5QrCodeInstance.current.start(
                 { facingMode: 'environment' },
                 config,
                 async (decodedText) => {
                     try {
                         setLoading(true);
 
-                        await scanner.stop();
-                        scanner.clear();
-                        setScanning(false);
+                        await html5QrCodeInstance.current.stop();
+                        html5QrCodeInstance.current.clear();
+                        setScannerActive(false);
 
                         const validation = await validateQRCode(decodedText);
 
@@ -85,17 +85,16 @@ const QRScanner = () => {
     };
 
     const handleScanNext = () => {
-        startScanner();
+        startScanner(); // Restart scanner for next scan
     };
 
     return (
         <div className={`scanner-container ${flash ? 'flash' : ''}`}>
-            {!scanning && !result && !error && (
-                <button onClick={startScanner}>Ready to Scan</button>
-            )}
+            {/* Scanner container MUST always be rendered */}
+            <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: '350px', marginBottom: '20px' }} />
 
-            {scanning && !loading && (
-                <div id="qr-reader" style={{ width: '100%', maxWidth: '350px', height: '350px' }} />
+            {!scannerActive && !result && !error && (
+                <button onClick={startScanner}>Ready to Scan</button>
             )}
 
             {loading && <Loader />}
